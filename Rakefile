@@ -1,8 +1,11 @@
 task :default do
+  task_start = Time.now
+
   require 'uri'
   require 'bundler'
   Bundler.require
 
+  ITERATIONS         = (ENV['ITERATIONS'] || 5).to_i
   TEST_PERIOD        = (ENV['TEST_PERIOD'] || 1).to_f
   JOB_COUNT          = (ENV['JOB_COUNT'] || 1000).to_i
   SYNCHRONOUS_COMMIT = ENV['SYNCHRONOUS_COMMIT'] || 'on'
@@ -45,68 +48,93 @@ task :default do
   define_method(:parent?) { parent_pid == Process.pid }
 
   puts "Benchmarking #{QUEUES.keys.join(', ')}"
-  puts "    DATABASE_URL = #{DATABASE_URL}"
-  puts "    JOB_COUNT = #{JOB_COUNT}"
-  puts "    TEST_PERIOD = #{TEST_PERIOD}"
-  puts "    SYNCHRONOUS_COMMIT = #{SYNCHRONOUS_COMMIT}"
+  puts "  ITERATIONS = #{ITERATIONS}"
+  puts "  DATABASE_URL = #{DATABASE_URL}"
+  puts "  JOB_COUNT = #{JOB_COUNT}"
+  puts "  TEST_PERIOD = #{TEST_PERIOD}"
+  puts "  SYNCHRONOUS_COMMIT = #{SYNCHRONOUS_COMMIT}"
   puts
 
-  QUEUES.each do |queue, procs|
-    worker_count = 1
-    rates        = []
+  peaks = {}
 
-    loop do
-      $redis.flushdb
-      worker_count.times { Process.fork if parent? }
-      $redis.client.reconnect
+  ITERATIONS.times do |i|
+    puts "Iteration ##{i + 1}:"
 
-      if parent?
-        # Give workers a chance to warm up before we start tracking their progress.
-        sleep 0.2
+    QUEUES.each do |queue, procs|
+      peaks[queue] ||= []
+      worker_count   = 1
+      rates          = []
 
-        # Reset the counter and count the jobs done over TEST_PERIOD seconds.
-        # Ruby may let this thread sleep longer than TEST_PERIOD, so don't
-        # trust that value, and actually measure the elapsed time.
-        $redis.set 'job-count', 0
-        start = Time.now
-        sleep TEST_PERIOD
-        count = $redis.get('job-count').to_i
-        elapsed_time = Time.now - start
-        rates << (count / elapsed_time)
+      print "#{queue}: "
 
-        # Signal child processes to exit.
-        $redis.set 'job-count', -1_000_000
+      loop do
+        $redis.flushdb
+        worker_count.times { Process.fork if parent? }
+        $redis.client.reconnect
 
-        Process.waitall
-      else
-        # We're a child/worker process. First, establish connections.
-        procs[:setup].call
+        if parent?
+          # Give workers a chance to warm up before we start tracking their progress.
+          sleep 0.2
 
-        loop do
-          # Work job.
-          procs[:work].call
+          # Reset the counter and count the jobs done over TEST_PERIOD seconds.
+          # Ruby may let this thread sleep longer than TEST_PERIOD, so don't
+          # trust that value, and actually measure the elapsed time.
+          $redis.set 'job-count', 0
+          start = Time.now
+          sleep TEST_PERIOD
+          count = $redis.get('job-count').to_i
+          elapsed_time = Time.now - start
+          rates << (count / elapsed_time)
 
-          # Mark job as completed. If this is negative, it means we're shutting down.
-          break if $redis.incr('job-count') < 0
+          # Signal child processes to exit.
+          $redis.set 'job-count', -1_000_000
+
+          Process.waitall
+        else
+          # We're a child/worker process. First, establish connections.
+          procs[:setup].call
+
+          loop do
+            # Work job.
+            procs[:work].call
+
+            # Mark job as completed. If this is negative, it means we're shutting down.
+            break if $redis.incr('job-count') < 0
+          end
+
+          exit
         end
 
-        exit
-      end
+        print "#{rates.count} => #{rates.last.round(1)}"
 
-      puts "#{queue}: With #{rates.count} workers, processed #{rates.last.round(1)} jobs / second"
+        # If there were three previous rates and this one was lower than all three,
+        # assume the slope is trending down and we're done.
+        recent = rates.last(4)
+        if recent.length == 4 && recent.last == recent.min
+          peak  = rates.max
+          count = rates.index(peak) + 1
 
-      # If there were three previous rates and this one was lower than all three,
-      # assume the slope is trending down and we're done.
-      recent = rates.last(4)
-      if recent.length == 4 && recent.last == recent.min
-        peak  = rates.max
-        count = rates.index(peak) + 1
-        puts "\n#{queue}: Peaked at #{count} workers with #{peak.round(1)} jobs/second\n\n\n"
-        break
-      else
-        # Try again with one more worker.
-        worker_count += 1
+          puts
+          puts "#{queue}: Peaked at #{count} workers with #{peak.round(1)} jobs/second\n"
+
+          peaks[queue] << peak
+
+          break
+        else
+          # Try again with one more worker.
+          print ", "
+          worker_count += 1
+        end
       end
     end
+
+    puts
   end
+
+  peaks.each do |queue, array|
+    puts "#{queue} peak average: #{(array.inject(:+) / array.length).round(1)} jobs per second"
+  end
+
+  puts
+  puts "Total runtime: #{(Time.now - task_start).round(1)} seconds"
 end
