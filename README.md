@@ -12,7 +12,7 @@ You may also need to pass REDIS_URL, if there isn't a server running on the loca
 
 This script measures the maximum throughput of a given Postgres installation when running DelayedJob, QueueClassic and Que. It does this by forking itself and hammering the database with many workers, while measuring how many jobs are worked per second. I designed Que specifically to have a very high throughput (workers don't block each other when locking jobs, and locking a job doesn't require a disk write), so it tends to win this benchmark.
 
-The benchmark results can be significantly affected by how busy the disk and CPU are at a given moment, so my advice would be to not read very much into a single run of the benchmark, especially if you're running it on shared hardware.
+The benchmark results can be significantly affected by how busy the disk and CPU are at a given moment, so by default they are run five times and the results are averaged. You may want to set the ITERATIONS environment variable to an even higher number if you're running on shared hardware like AWS.
 
 ### synchronous_commit
 
