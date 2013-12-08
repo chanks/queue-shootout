@@ -133,7 +133,11 @@ task :default do
   end
 
   peaks.each do |queue, array|
-    puts "#{queue} peak average: #{(array.inject(:+) / array.length).round(1)} jobs per second"
+    sum    = array.inject(:+)
+    avg    = sum / array.length
+    stddev = Math.sqrt(array.inject(0){|total, t| total + (t - avg)**2 } / (array.length - 1))
+
+    puts "#{queue} jobs per second: avg = #{avg.round(1)}, max = #{array.max.round(1)}, min = #{array.min.round(1)}, stddev = #{stddev.round(1)}"
   end
 
   puts
