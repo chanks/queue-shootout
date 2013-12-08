@@ -111,18 +111,15 @@ task :default do
 
         print "#{rates.count} => #{rates.last.round(1)}" unless QUIET
 
-        # If there were three previous rates and this one was lower than all three,
+        # If the peak productivity was not in the past three data points,
         # assume the slope is trending down and we're done.
-        recent = rates.last(4)
-        if recent.length == 4 && recent.last == recent.min
-          peak  = rates.max
-          count = rates.index(peak) + 1
-
-          puts  unless QUIET
-          puts "#{queue}: Peaked at #{count} workers with #{peak.round(1)} jobs/second\n" unless QUIET
+        peak   = rates.max
+        recent = rates.last(5)
+        if recent.length == 5 && !recent.include?(peak)
+          puts unless QUIET
+          puts "#{queue}: Peaked at #{rates.index(peak) + 1} workers with #{peak.round(1)} jobs/second\n" unless QUIET
 
           peaks[queue] << peak
-
           break
         else
           # Try again with one more worker.
