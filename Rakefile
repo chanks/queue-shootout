@@ -5,6 +5,7 @@ task :default do
   require 'bundler'
   Bundler.require
 
+  QUIET              = !!ENV['QUIET']
   ITERATIONS         = (ENV['ITERATIONS'] || 5).to_i
   TEST_PERIOD        = (ENV['TEST_PERIOD'] || 0.2).to_f
   WARMUP_PERIOD      = (ENV['WARMUP_PERIOD'] || 0.2).to_f
@@ -49,6 +50,7 @@ task :default do
   define_method(:parent?) { parent_pid == Process.pid }
 
   puts "Benchmarking #{QUEUES.keys.join(', ')}"
+  puts "  QUIET = #{QUIET}"
   puts "  ITERATIONS = #{ITERATIONS}"
   puts "  DATABASE_URL = #{DATABASE_URL}"
   puts "  JOB_COUNT = #{JOB_COUNT}"
@@ -60,14 +62,14 @@ task :default do
   peaks = {}
 
   ITERATIONS.times do |i|
-    puts "Iteration ##{i + 1}:"
+    puts "Iteration ##{i + 1}:" unless QUIET
 
     QUEUES.each do |queue, procs|
       peaks[queue] ||= []
       worker_count   = 1
       rates          = []
 
-      print "#{queue}: "
+      print "#{queue}: " unless QUIET
 
       loop do
         $redis.flushdb
@@ -107,7 +109,7 @@ task :default do
           exit
         end
 
-        print "#{rates.count} => #{rates.last.round(1)}"
+        print "#{rates.count} => #{rates.last.round(1)}" unless QUIET
 
         # If there were three previous rates and this one was lower than all three,
         # assume the slope is trending down and we're done.
@@ -116,15 +118,15 @@ task :default do
           peak  = rates.max
           count = rates.index(peak) + 1
 
-          puts
-          puts "#{queue}: Peaked at #{count} workers with #{peak.round(1)} jobs/second\n"
+          puts  unless QUIET
+          puts "#{queue}: Peaked at #{count} workers with #{peak.round(1)} jobs/second\n" unless QUIET
 
           peaks[queue] << peak
 
           break
         else
           # Try again with one more worker.
-          print ", "
+          print ", "  unless QUIET
           worker_count += 1
         end
       end
