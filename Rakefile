@@ -7,6 +7,7 @@ task :default do
 
   ITERATIONS         = (ENV['ITERATIONS'] || 5).to_i
   TEST_PERIOD        = (ENV['TEST_PERIOD'] || 0.2).to_f
+  WARMUP_PERIOD      = (ENV['WARMUP_PERIOD'] || 0.2).to_f
   JOB_COUNT          = (ENV['JOB_COUNT'] || 1000).to_i
   SYNCHRONOUS_COMMIT = ENV['SYNCHRONOUS_COMMIT'] || 'on'
 
@@ -52,6 +53,7 @@ task :default do
   puts "  DATABASE_URL = #{DATABASE_URL}"
   puts "  JOB_COUNT = #{JOB_COUNT}"
   puts "  TEST_PERIOD = #{TEST_PERIOD}"
+  puts "  WARMUP_PERIOD = #{WARMUP_PERIOD}"
   puts "  SYNCHRONOUS_COMMIT = #{SYNCHRONOUS_COMMIT}"
   puts
 
@@ -74,7 +76,7 @@ task :default do
 
         if parent?
           # Give workers a chance to warm up before we start tracking their progress.
-          sleep 0.2
+          sleep WARMUP_PERIOD
 
           # Reset the counter and count the jobs done over TEST_PERIOD seconds.
           # Ruby may let this thread sleep longer than TEST_PERIOD, so don't
