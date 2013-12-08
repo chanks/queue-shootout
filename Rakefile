@@ -6,7 +6,7 @@ task :default do
   Bundler.require
 
   ITERATIONS         = (ENV['ITERATIONS'] || 5).to_i
-  TEST_PERIOD        = (ENV['TEST_PERIOD'] || 1).to_f
+  TEST_PERIOD        = (ENV['TEST_PERIOD'] || 0.2).to_f
   JOB_COUNT          = (ENV['JOB_COUNT'] || 1000).to_i
   SYNCHRONOUS_COMMIT = ENV['SYNCHRONOUS_COMMIT'] || 'on'
 
