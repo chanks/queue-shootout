@@ -1,9 +1,10 @@
 $pg.async_exec "DROP TABLE IF EXISTS queue_classic_jobs CASCADE"
 $pg.async_exec "DROP FUNCTION IF EXISTS queue_classic_notify()"
 
-# Set up QueueClassic.
-QC::Conn.connection = $pg
-QC::Setup.create
+# Set up QueueClassic. There's unfortunately no clean way to set the
+# default_conn_adapter in v3.0.0rc.
+QC.send :instance_variable_set, :@conn_adapter, QC::ConnAdapter.new($pg)
+QC::Setup.create($pg)
 
 $pg.async_exec <<-SQL
   INSERT INTO queue_classic_jobs (q_name, method, args)
@@ -14,18 +15,19 @@ SQL
 module QCPerpetualJob
   class << self
     def run(*args)
-      QC::Conn.connection.async_exec "begin"
+      QC.default_conn_adapter.execute "begin"
       QC.enqueue "QCPerpetualJob.run"
       # Not sure how to delete this job in the same transaction?
-      QC::Conn.connection.async_exec "commit"
+      QC.default_conn_adapter.execute "commit"
     end
   end
 end
 
 QUEUES[:queue_classic] = {
   :setup => -> {
-    QC::Conn.connection = NEW_PG.call
-    $worker = QC::Worker.new
+    pg = NEW_PG.call
+    QC.send :instance_variable_set, :@conn_adapter, QC::ConnAdapter.new(pg)
+    $worker = QC::Worker.new(:connection => pg)
   },
   :work => -> { $worker.work }
 }
