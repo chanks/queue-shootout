@@ -30,14 +30,14 @@ GEM
     method_source (0.8.1)
     minitest (4.7.5)
     multi_json (1.8.2)
-    pg (0.17.0)
+    pg (0.17.1)
     pry (0.9.12.1)
       coderay (~> 1.0.5)
       method_source (~> 0.8)
       slop (~> 3.4)
     que (0.2.0)
       multi_json (~> 1.0)
-    queue_classic (2.2.3)
+    queue_classic (3.0.0rc)
       pg (~> 0.17.0)
     redis (3.0.6)
     slop (3.4.4)
@@ -54,5 +54,5 @@ DEPENDENCIES
   hiredis
   pry
   que
-  queue_classic
+  queue_classic (= 3.0.0rc)
   redis
