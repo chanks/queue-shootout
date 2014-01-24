@@ -1,7 +1,7 @@
 $pg.async_exec "DROP TABLE IF EXISTS que_jobs"
 
 Que.connection = $pg
-Que.create!
+Que.migrate!
 
 $pg.async_exec <<-SQL
   INSERT INTO que_jobs (job_class, priority)
