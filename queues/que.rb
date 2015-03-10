@@ -12,7 +12,7 @@ SQL
 class QuePerpetualJob < Que::Job
   def run
     Que.execute "begin"
-    self.class.queue
+    self.class.enqueue
     destroy
     Que.execute "commit"
   end
