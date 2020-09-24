@@ -1,5 +1,7 @@
 # PostgreSQL Job Queue Shootout
 
+**This repo is no longer maintained, for more current benchmarking code/data please see [bensheldon's fork](https://github.com/bensheldon/queue-shootout).**
+
 Yee-haw! To run:
 
     # Install PostgreSQL 9.2+ and Redis, if you haven't already.
