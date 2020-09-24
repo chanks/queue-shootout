@@ -2,11 +2,13 @@ source 'https://rubygems.org'
 
 gem 'delayed_job'
 gem 'delayed_job_active_record'
-gem 'queue_classic', '3.0.0rc'
-gem 'que', '0.5.0'
+gem 'good_job'
+gem 'queue_classic', github: 'QueueClassic/queue_classic'
+gem 'que'
 
 # Use Redis to track job rates and synchronize workers.
-gem 'redis'
+gem 'redis', '~> 3.0.0'
 gem 'hiredis'
 
+gem 'rake'
 gem 'pry' # For development.
