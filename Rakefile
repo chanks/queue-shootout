@@ -36,7 +36,7 @@ task :default do
   $redis = Redis.new :url    => ENV['REDIS_URL'],
                      :driver => :hiredis
 
-  %w(delayed_job queue_classic que).each { |queue| require "./queues/#{queue}" }
+  %w(delayed_job good_job queue_classic que).each { |queue| require "./queues/#{queue}" }
 
   $pg.async_exec "ANALYZE"
 
